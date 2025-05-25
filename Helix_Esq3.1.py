@@ -11,18 +11,32 @@ from transformers import (
 
 def train_model(data_path, model_path, output_dir, num_train_epochs=3):
     # Tokenizer
-    tokenizer = AutoTokenizer.from_pretrained(r"C:\Users\Detai\HelixEsq")
+    tokenizer = AutoTokenizer.from_pretrained(model_path)
 
     # Load the model
     model = AutoModelForCausalLM.from_pretrained(model_path)
 
     # Preparing the dataset
     files = glob.glob(os.path.join(data_path, '**/*.txt'), recursive=True)
+
+    def _combine_files(file_list, output_file="combined_dataset.txt"):
+        with open(output_file, "w", encoding="utf-8") as out_f:
+            for f in file_list:
+                with open(f, "r", encoding="utf-8") as in_f:
+                    out_f.write(in_f.read())
+                    out_f.write("\n")
+        return output_file
+
+    if not files:
+        raise ValueError(f"No .txt files found in {data_path}")
+
+    combined_path = _combine_files(files)
     dataset = TextDataset(
         tokenizer=tokenizer,
-        file_path=files,
+        file_path=combined_path,
         block_size=128
     )
+    os.remove(combined_path)
 
     data_collator = DataCollatorForLanguageModeling(
         tokenizer=tokenizer, mlm=False
